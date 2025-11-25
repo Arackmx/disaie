@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DISAIE - Inicio</title>
+    <meta name="description" content="DISAIE - Innovación y tecnología avanzada a través de AI Evolution">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <nav class="navbar" id="navbar">
+        <div class="navbar-container">
+            <a href="#inicio" class="navbar-logo">
+                <img src="img/logoc.png" alt="DISAIE Logo">
+            </a>
+            <ul class="navbar-menu">
+                <li class="navbar-item">
+                    <a href="#inicio" class="navbar-link active">Inicio</a>
+                </li>
+                <li class="navbar-item">
+                    <a href="nosotros.html" class="navbar-link">Nosotros</a>
+                </li>
+                <li class="navbar-item navbar-dropdown">
+                    <a href="#servicios" class="navbar-link">
+                        Servicios
+                        <svg class="dropdown-icon" width="12" height="8" viewBox="0 0 12 8" fill="none">
+                            <path d="M1 1L6 6L11 1" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round" />
+                        </svg>
+                    </a>
+                    <div class="dropdown-menu">
+                        <div class="dropdown-container">
+                            <a href="#centinel-ia" class="dropdown-item">
+                                <div class="dropdown-item-content">
+                                    <h3>Centinel IA</h3>
+                                    <p>Inteligencia Artificial avanzada</p>
+                                </div>
+                            </a>
+                            <a href="#ambientes-vr" class="dropdown-item">
+                                <div class="dropdown-item-content">
+                                    <h3>Ambientes VR</h3>
+                                    <p>Realidad Virtual inmersiva</p>
+                                </div>
+                            </a>
+                            <a href="#aileenn" class="dropdown-item">
+                                <div class="dropdown-item-content">
+                                    <h3>AILEENN</h3>
+                                    <p>Soluciones inteligentes</p>
+                                </div>
+                            </a>
+                        </div>
+                    </div>
+                </li>
+            </ul>
+            <a href="https://wa.me/5215569601922" target="_blank" class="whatsapp-btn">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                    <path
+                        d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"
+                        fill="currentColor" />
+                </svg>
+                WhatsApp
+            </a>
+            <button class="mobile-menu-toggle" id="mobileMenuToggle">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+        </div>
+    </nav>
+
+    <main>
+        <section id="inicio" class="hero-section">
+            <canvas id="particleCanvas" class="particle-canvas"></canvas>
+            <div class="hero-content">
+                <img src="img/logo.png" alt="DISAIE Logo" class="hero-logo">
+                <div class="hero-text">
+                    <h1 class="hero-title">INNOVACIÓN Y TECNOLOGÍA AVANZADA</h1>
+                    <p class="hero-subtitle">A través de nuestra unidad especializada AI Evolution, integramos
+                        diferentes soluciones tecnológicas aplicadas en diferentes sectores.</p>
+                    <a href="nosotros.html" class="cta-button">Conoce más</a>
+                </div>
+            </div>
+        </section>
+
+        <section id="servicios" class="services-section">
+            <div class="services-container">
+                <div class="services-image-container">
+                    <div class="image-frame">
+                        <img id="serviceImage" src="img/brain.png" alt="Servicio" class="service-image">
+                    </div>
+                </div>
+                <div class="services-content">
+                    <div class="service-block" data-image="img/brain.png">
+                        <div class="service-image-mobile">
+                            <img src="img/brain.png" alt="Programa Centinel IA">
+                        </div>
+                        <div class="service-text">
+                            <h2>PROGRAMA CENTINEL IA</h2>
+                            <p>INNOVACIÓN EN EXPLORACIÓN SUBTERRÁNEA Y PROTECCIÓN ESTRATÉGICA.</p>
+                            <a href="#centinel-ia" class="service-cta">Conoce más</a>
+                        </div>
+                    </div>
+                    <div class="service-block" data-image="img/vr.png">
+                        <div class="service-image-mobile">
+                            <img src="img/vr.png" alt="Ambientes VR">
+                        </div>
+                        <div class="service-text">
+                            <h2>AMBIENTES VR</h2>
+                            <p>soluciones digitales a la medida que utilizan tecnologías como la Realidad Virtual,
+                                Aumentada y la Inteligencia Artificial para sumergir a los usuarios en entornos
+                                simulados, permitiéndoles aprender y practicar procesos complejos en un ambiente
+                                controlado.</p>
+                            <a href="#ambientes-vr" class="service-cta">Conoce más</a>
+                        </div>
+                    </div>
+                    <div class="service-block" data-image="img/aileenn.png">
+                        <div class="service-image-mobile">
+                            <img src="img/aileenn.png" alt="AILEENN">
+                        </div>
+                        <div class="service-text">
+                            <h2>AILEENN</h2>
+                            <p>Es un motor de IA que se conecta directamente a las bases de datos de la empresa (ERP,
+                                etc.).</p>
+                            <a href="#aileenn" class="service-cta">Conoce más</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="cta" class="cta-section">
+            <div class="cta-container">
+                <div class="cta-content">
+                    <h2 class="cta-text">
+                        <span id="typewriter"></span>
+                        <span class="cursor">|</span>
+                    </h2>
+                </div>
+                <div class="cta-button-container">
+                    <a href="/contacto" class="cta-main-button">Contactar Ahora</a>
+                </div>
+            </div>
+            <div class="circles-container">
+                <div class="circle" style="--delay: 0s">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                        <path
+                            d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"
+                            stroke="currentColor" stroke-width="2" />
+                    </svg>
+                </div>
+                <div class="circle" style="--delay: 0.5s">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" />
+                        <path d="M12 6V12L16 14" stroke="currentColor" stroke-width="2" />
+                    </svg>
+                </div>
+                <div class="circle" style="--delay: 1s">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                        <path d="M20 6L9 17L4 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                    </svg>
+                </div>
+                <div class="circle" style="--delay: 1.5s">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                        <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" />
+                        <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" />
+                        <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" />
+                    </svg>
+                </div>
+                <div class="circle" style="--delay: 2s">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                        <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" stroke-width="2" />
+                        <path d="M9 12L11 14L15 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                    </svg>
+                </div>
+                <div class="circle" style="--delay: 2.5s">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                        <path d="M13 2L3 14H12L11 22L21 10H12L13 2Z" stroke="currentColor" stroke-width="2" />
+                    </svg>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script src="particles.js"></script>
+    <script src="services.js"></script>
+    <script src="cta.js"></script>
+    <script src="script.js"></script>
+</body>
+
+</html>
