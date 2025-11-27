@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Lector QR y Barras</title>
+    <!-- Tailwind CSS para estilos rápidos y responsivos -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Librería HTML5-QRCode -->
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f3f4f6;
+            overscroll-behavior-y: contain; /* Prevenir 'pull to refresh' accidental */
+        }
+        #reader {
+            width: 100%;
+            border-radius: 12px;
+            overflow: hidden;
+            background-color: black;
+        }
+        /* Ocultar elementos extraños que a veces genera la librería */
+        #reader__dashboard_section_csr span, 
+        #reader__dashboard_section_swaplink {
+            display: none !important;
+        }
+        /* Animación para nuevo escaneo */
+        @keyframes highlight {
+            0% { background-color: #dcfce7; }
+            100% { background-color: white; }
+        }
+        .new-scan {
+            animation: highlight 1.5s ease-out;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 h-screen flex flex-col text-gray-800">
+
+    <!-- Encabezado -->
+    <header class="bg-blue-600 text-white p-4 shadow-md text-center shrink-0 z-10">
+        <h1 class="text-xl font-bold flex items-center justify-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4h-4v-5h4v-4H6v4H2v-4h4V9h4v2h2a2 2 0 012 2v5zM6 4v1m0 0v2m0-2h4m-4 6h4m4-6h2m0 0v2m0-2h-2m-2 2h2m-2 4h2" />
+            </svg>
+            Lector Plano
+        </h1>
+        <p class="text-xs text-blue-200 mt-1">Solo texto. Sin redirecciones.</p>
+    </header>
+
+    <!-- Contenido Principal -->
+    <main class="flex-1 overflow-y-auto p-4 flex flex-col items-center max-w-md mx-auto w-full">
+        
+        <!-- Área de la cámara -->
+        <div class="w-full bg-white p-2 rounded-xl shadow-sm mb-4 relative">
+            <div id="reader" class="min-h-[250px] bg-black rounded-lg"></div>
+            
+            <!-- Indicador de estado -->
+            <div id="status-indicator" class="absolute top-4 right-4 bg-red-500 text-white text-xs px-2 py-1 rounded-full opacity-0 transition-opacity">
+                Escaneando...
+            </div>
+        </div>
+
+        <!-- Controles -->
+        <div class="flex gap-2 w-full mb-6">
+            <button id="start-btn" onclick="startScanning()" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3 px-4 rounded-lg font-semibold shadow transition-transform active:scale-95 flex justify-center items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                </svg>
+                Iniciar Cámara
+            </button>
+            <button id="stop-btn" onclick="stopScanning()" class="hidden flex-1 bg-red-500 hover:bg-red-600 text-white py-3 px-4 rounded-lg font-semibold shadow transition-transform active:scale-95 flex justify-center items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+                Detener
+            </button>
+        </div>
+
+        <!-- Resultado Actual -->
+        <div id="result-container" class="w-full hidden mb-6">
+            <h2 class="text-sm font-bold text-gray-500 uppercase mb-2 tracking-wide">Último Escaneo</h2>
+            <div class="bg-white border-l-4 border-blue-500 rounded-r-lg shadow-md p-4 flex flex-col gap-3">
+                <div class="break-all font-mono text-lg text-gray-800" id="scanned-text">
+                    <!-- El texto aparecerá aquí -->
+                </div>
+                <div class="flex justify-between items-center pt-2 border-t border-gray-100">
+                    <span class="text-xs text-gray-400" id="scan-format">FORMATO</span>
+                    <button onclick="copyToClipboard()" class="text-blue-600 text-sm font-medium hover:text-blue-800 flex items-center gap-1">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                        </svg>
+                        Copiar
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Historial -->
+        <div class="w-full">
+            <div class="flex justify-between items-end mb-2">
+                <h2 class="text-sm font-bold text-gray-500 uppercase tracking-wide">Historial de Sesión</h2>
+                <button onclick="clearHistory()" class="text-xs text-red-400 hover:text-red-600">Borrar todo</button>
+            </div>
+            <ul id="scan-history" class="space-y-2">
+                <li id="empty-history" class="text-center text-gray-400 text-sm py-4 italic">No hay escaneos recientes</li>
+            </ul>
+        </div>
+    </main>
+
+    <!-- Sonido de beep (generado base64 para no depender de archivos externos) -->
+    <audio id="beep-sound" src="data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YU"></audio>
+
+    <script>
+        let html5QrcodeScanner = null;
+        let isScanning = false;
+        let lastScannedText = "";
+        let lastScannedTime = 0;
+
+        // Sonido simple de beep
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function playBeep() {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const oscillator = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            oscillator.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            oscillator.type = 'square';
+            oscillator.frequency.value = 880; // A5
+            gainNode.gain.value = 0.1;
+            oscillator.start();
+            setTimeout(() => { oscillator.stop(); }, 100);
+            
+            // Vibración si el dispositivo lo soporta
+            if (navigator.vibrate) navigator.vibrate(50);
+        }
+
+        async function startScanning() {
+            try {
+                // Solicitar permiso de cámara explícitamente primero para mejor UX
+                // await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+
+                document.getElementById('start-btn').classList.add('hidden');
+                document.getElementById('stop-btn').classList.remove('hidden');
+                document.getElementById('status-indicator').classList.remove('opacity-0');
+                
+                if (!html5QrcodeScanner) {
+                    html5QrcodeScanner = new Html5Qrcode("reader");
+                }
+
+                const config = { 
+                    fps: 10, 
+                    qrbox: { width: 250, height: 250 },
+                    aspectRatio: 1.0
+                };
+
+                // Preferir cámara trasera ("environment")
+                await html5QrcodeScanner.start(
+                    { facingMode: "environment" }, 
+                    config, 
+                    onScanSuccess, 
+                    onScanFailure
+                );
+                
+                isScanning = true;
+
+            } catch (err) {
+                console.error("Error iniciando cámara", err);
+                alert("Error: No se pudo acceder a la cámara. Asegúrate de dar permisos y usar HTTPS.");
+                stopScanning();
+            }
+        }
+
+        async function stopScanning() {
+            if (html5QrcodeScanner && isScanning) {
+                try {
+                    await html5QrcodeScanner.stop();
+                    document.getElementById('reader').innerHTML = ""; // Limpiar el div
+                } catch (err) {
+                    console.error("Error deteniendo", err);
+                }
+            }
+            isScanning = false;
+            document.getElementById('start-btn').classList.remove('hidden');
+            document.getElementById('stop-btn').classList.add('hidden');
+            document.getElementById('status-indicator').classList.add('opacity-0');
+        }
+
+        function onScanSuccess(decodedText, decodedResult) {
+            // Evitar escaneos duplicados muy rápidos (menos de 2 segundos)
+            const now = Date.now();
+            if (decodedText === lastScannedText && (now - lastScannedTime < 2000)) {
+                return;
+            }
+
+            lastScannedText = decodedText;
+            lastScannedTime = now;
+            
+            playBeep();
+            
+            // Mostrar resultado principal
+            const resultContainer = document.getElementById('result-container');
+            const resultText = document.getElementById('scanned-text');
+            const resultFormat = document.getElementById('scan-format');
+            
+            resultContainer.classList.remove('hidden');
+            resultText.innerText = decodedText; // innerText evita ejecución de HTML/Scripts
+            
+            // Determinar formato (si está disponible)
+            let formatName = decodedResult?.result?.format?.formatName || "CÓDIGO";
+            resultFormat.innerText = formatName.toUpperCase();
+
+            // Añadir al historial
+            addToHistory(decodedText, formatName);
+        }
+
+        function onScanFailure(error) {
+            // La librería lanza errores constantemente cuando no detecta nada en un frame.
+            // Los ignoramos para no saturar la consola.
+        }
+
+        function addToHistory(text, format) {
+            const historyList = document.getElementById('scan-history');
+            const emptyMsg = document.getElementById('empty-history');
+            if (emptyMsg) emptyMsg.remove();
+
+            const li = document.createElement('li');
+            li.className = "bg-white p-3 rounded-lg shadow-sm border border-gray-200 flex justify-between items-start gap-2 new-scan";
+            
+            const contentDiv = document.createElement('div');
+            contentDiv.className = "overflow-hidden";
+            
+            const textP = document.createElement('p');
+            textP.className = "text-gray-800 font-mono text-sm break-all";
+            textP.innerText = text;
+
+            const formatSpan = document.createElement('span');
+            formatSpan.className = "text-[10px] bg-gray-200 text-gray-600 px-1.5 py-0.5 rounded uppercase font-bold tracking-wider";
+            formatSpan.innerText = format || "CODE";
+
+            contentDiv.appendChild(textP);
+            contentDiv.appendChild(formatSpan);
+
+            const copyBtn = document.createElement('button');
+            copyBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400 hover:text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" /></svg>`;
+            copyBtn.onclick = () => {
+                navigator.clipboard.writeText(text);
+                // Feedback visual pequeño
+                copyBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-500" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>`;
+                setTimeout(() => {
+                    copyBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400 hover:text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" /></svg>`;
+                }, 1500);
+            };
+
+            li.appendChild(contentDiv);
+            li.appendChild(copyBtn);
+
+            historyList.prepend(li);
+        }
+
+        function copyToClipboard() {
+            const text = document.getElementById('scanned-text').innerText;
+            if(text) {
+                navigator.clipboard.writeText(text).then(() => {
+                    const btn = document.querySelector('#result-container button');
+                    const originalText = btn.innerHTML;
+                    btn.innerText = "¡Copiado!";
+                    setTimeout(() => {
+                         btn.innerHTML = originalText;
+                    }, 2000);
+                });
+            }
+        }
+        
+        function clearHistory() {
+            document.getElementById('scan-history').innerHTML = '<li id="empty-history" class="text-center text-gray-400 text-sm py-4 italic">No hay escaneos recientes</li>';
+            document.getElementById('result-container').classList.add('hidden');
+        }
+    </script>
+</body>
+</html>
+
