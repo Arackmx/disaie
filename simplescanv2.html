@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Decodificador GS1 Pro</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Librería de Escaneo -->
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f0f2f5;
+            overscroll-behavior-y: contain;
+        }
+        #reader {
+            width: 100%;
+            border-radius: 12px;
+            overflow: hidden;
+            background-color: black;
+        }
+        /* Ocultar elementos UI sobrantes de la librería */
+        #reader__dashboard_section_csr span, 
+        #reader__dashboard_section_swaplink { display: none !important; }
+        
+        /* Animación de escaneo */
+        @keyframes scan-flash {
+            0% { background-color: #bbf7d0; }
+            100% { background-color: white; }
+        }
+        .flash-effect { animation: scan-flash 1s ease-out; }
+
+        /* Estilos específicos para la tabla */
+        .gs1-row-highlight { background-color: #dcfce7; border-left: 4px solid #22c55e; }
+        .gs1-row-normal { background-color: #ffffff; border-left: 4px solid #e5e7eb; }
+    </style>
+</head>
+<body class="h-screen flex flex-col text-gray-800">
+
+    <!-- Header -->
+    <header class="bg-indigo-700 text-white p-4 shadow-lg shrink-0 z-20">
+        <h1 class="text-xl font-bold flex items-center justify-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 10l-2 1m0 0l-2-1m2 1v2.5M20 7l-2 1m2-1l-2-1m2 1v2.5M14 4l-2-1-2 1M4 7l2-1M4 7l2 1M4 7v2.5M12 21l-2-1m2 1l2-1m-2 1v-2.5M6 18l-2-1v-2.5M18 18l2-1v-2.5" />
+            </svg>
+            GS1 Decodificador
+        </h1>
+        <p class="text-xs text-indigo-200 text-center mt-1">Estandar GS1-128 / DataMatrix</p>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-1 overflow-y-auto p-3 flex flex-col items-center max-w-lg mx-auto w-full pb-20">
+        
+        <!-- Camera Section -->
+        <div class="w-full bg-white p-1 rounded-xl shadow-md mb-4 relative">
+            <div id="reader" class="min-h-[250px]"></div>
+            <div id="status-badge" class="absolute top-3 right-3 bg-red-500 text-white text-[10px] uppercase font-bold px-2 py-1 rounded-full opacity-0 transition-opacity">
+                Cámara Activa
+            </div>
+        </div>
+
+        <!-- Buttons -->
+        <div class="flex gap-3 w-full mb-4">
+            <button id="start-btn" onclick="startScanning()" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-lg font-bold shadow-md active:scale-95 transition-all flex justify-center items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /></svg>
+                Escanear
+            </button>
+            <button id="stop-btn" onclick="stopScanning()" class="hidden flex-1 bg-red-500 hover:bg-red-600 text-white py-3 rounded-lg font-bold shadow-md active:scale-95 transition-all">
+                Detener
+            </button>
+        </div>
+
+        <!-- Resultados -->
+        <div id="result-area" class="w-full hidden animate-fade-in">
+            
+            <!-- Raw String Card -->
+            <div class="bg-gray-800 text-gray-200 rounded-lg p-3 mb-4 shadow text-xs font-mono break-all relative group">
+                <span class="text-gray-500 block text-[10px] uppercase mb-1">Cadena Cruda (Raw)</span>
+                <span id="raw-text">...</span>
+                <button onclick="copyRaw()" class="absolute top-2 right-2 bg-gray-700 hover:bg-gray-600 p-1 rounded text-white">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" /></svg>
+                </button>
+            </div>
+
+            <!-- GS1 Table -->
+            <h2 class="text-sm font-bold text-gray-600 uppercase mb-2 ml-1 tracking-wide">Datos Decodificados</h2>
+            <div class="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-200">
+                <table class="w-full text-sm text-left">
+                    <thead class="bg-gray-50 text-gray-500 font-semibold uppercase text-xs">
+                        <tr>
+                            <th class="px-4 py-3 w-12">AI</th>
+                            <th class="px-4 py-3">Descripción</th>
+                            <th class="px-4 py-3 text-right">Valor</th>
+                        </tr>
+                    </thead>
+                    <tbody id="gs1-table-body" class="divide-y divide-gray-100">
+                        <!-- Filas generadas por JS -->
+                    </tbody>
+                </table>
+                <div id="no-gs1-msg" class="hidden p-4 text-center text-orange-500 italic text-sm">
+                    No se detectó formato GS1 estándar, pero se muestra la cadena cruda arriba.
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Sonidos -->
+    <audio id="beep-sound" src="data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YU"></audio>
+
+    <script>
+        // --- 1. CONFIGURACIÓN GS1 ---
+        // Definición de Identificadores de Aplicación (AI)
+        // 'L': longitud del campo de datos. 'V': es variable (true/false). 'D': es fecha (true). 'Dec': tiene decimales (true)
+        const GS1_AI_MAP = {
+            '00': { label: 'SSCC (Código Seriado Contenedor)', len: 18, var: false },
+            '01': { label: 'GTIN (EAN/UPC)', len: 14, var: false, highlight: true },
+            '02': { label: 'GTIN de Contenido', len: 14, var: false },
+            '10': { label: 'Número de Lote', len: 20, var: true, highlight: true },
+            '11': { label: 'Fecha Producción', len: 6, var: false, date: true },
+            '13': { label: 'Fecha Envasado', len: 6, var: false, date: true },
+            '15': { label: 'Fecha Consumo Pref.', len: 6, var: false, date: true },
+            '17': { label: 'Fecha Caducidad', len: 6, var: false, date: true, highlight: true },
+            '20': { label: 'Variante Producto', len: 2, var: false },
+            '21': { label: 'Número de Serie', len: 20, var: true, highlight: true },
+            '22': { label: 'Datos Variables (Salud)', len: 20, var: true },
+            '30': { label: 'Cantidad Variable', len: 8, var: true },
+            '37': { label: 'Cantidad (Unidades)', len: 8, var: true },
+            '240': { label: 'Identificación Adicional', len: 30, var: true },
+            '241': { label: 'Cód. Catálogo Cliente', len: 30, var: true },
+            '242': { label: 'Cód. Variación MFR', len: 6, var: true },
+            '250': { label: 'Lote Secundario', len: 30, var: true },
+            '400': { label: 'Pedido Compra Cliente', len: 30, var: true },
+            '410': { label: 'GLN Entregar A', len: 13, var: false },
+            '411': { label: 'GLN Facturar A', len: 13, var: false },
+            '412': { label: 'GLN Comprado En', len: 13, var: false },
+            '420': { label: 'CP Destino', len: 20, var: true },
+            '421': { label: 'CP Destino + ISO', len: 12, var: true },
+        };
+
+        // Rangos especiales para pesos (310x - 36xx)
+        // Manejaremos 310x - 316x (Peso Neto Kg)
+        // 320x - 329x (Peso Neto Libras)
+        function getWeightAIInfo(aiCode) {
+            const prefix = aiCode.substring(0, 3);
+            const decimals = parseInt(aiCode.charAt(3));
+            
+            if (prefix === '310') return { label: 'Peso Neto (kg)', decimals: decimals, unit: 'kg' };
+            if (prefix >= '311' && prefix <= '316') return { label: 'Peso/Dimensión (kg/m)', decimals: decimals, unit: 'kg/m' };
+            if (prefix === '320') return { label: 'Peso Neto (lb)', decimals: decimals, unit: 'lb' };
+            
+            return null;
+        }
+
+        // --- 2. MOTOR DE PARSEO GS1 ---
+        class GS1Parser {
+            constructor(rawString) {
+                this.raw = rawString;
+                // Reemplazamos FNC1 invisibles por un caracter seguro para debugging interno, aunque procesaremos el raw
+                // ASCII 29 es el Group Separator (GS)
+                this.cleanRaw = rawString.replace(/\u001D/g, '<GS>'); 
+                this.parsedData = [];
+            }
+
+            parse() {
+                let cursor = 0;
+                let data = this.raw;
+                const results = [];
+
+                // Manejo de prefijos comunes de lectores de hardware (ej: ]C1, ]d2)
+                if (data.startsWith(']C1') || data.startsWith(']e0') || data.startsWith(']d2')) {
+                    // Quitamos los identificadores de simbología si existen
+                    data = data.substring(3); 
+                }
+
+                while (cursor < data.length) {
+                    let bestMatch = null;
+                    let aiCode = '';
+
+                    // Intentar encontrar AI de 2, 3 o 4 dígitos
+                    for (let len of [2, 3, 4]) {
+                        const potentialAI = data.substr(cursor, len);
+                        
+                        // Chequeo directo en mapa
+                        if (GS1_AI_MAP[potentialAI]) {
+                            bestMatch = GS1_AI_MAP[potentialAI];
+                            aiCode = potentialAI;
+                            break;
+                        }
+
+                        // Chequeo de rangos de peso (310x, etc)
+                        if (len === 4) {
+                            const weightInfo = getWeightAIInfo(potentialAI);
+                            if (weightInfo) {
+                                bestMatch = { 
+                                    label: weightInfo.label, 
+                                    len: 6, // Datos de peso siempre son 6 dígitos
+                                    var: false, 
+                                    weight: true, 
+                                    decimals: weightInfo.decimals,
+                                    unit: weightInfo.unit 
+                                };
+                                aiCode = potentialAI;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (!bestMatch) {
+                        // Si no encontramos AI, abortamos para evitar bucles infinitos o mostramos resto como desconocido
+                        // Ojo: A veces hay basura al final
+                        break;
+                    }
+
+                    cursor += aiCode.length;
+                    let value = '';
+
+                    if (bestMatch.var) {
+                        // Campo VARIABLE: Leer hasta encontrar GS (\u001D) o fin de cadena, o max length
+                        let remaining = data.substring(cursor);
+                        let separatorIndex = remaining.indexOf('\u001D');
+                        
+                        // Lógica: Si hay separador, cortamos ahí.
+                        // Si no hay separador, pero el campo está al FINAL de la cadena, tomamos todo.
+                        // Si no hay separador y NO es el final, intentamos ser inteligentes (greedy) pero es riesgoso. 
+                        // Asumiremos que si no hay separador, tomamos hasta max length o fin.
+                        
+                        let extractLen = remaining.length;
+                        if (separatorIndex !== -1) {
+                            extractLen = separatorIndex;
+                        }
+                        
+                        // Limitamos a la longitud máxima definida por el AI
+                        if (extractLen > bestMatch.len) {
+                            extractLen = bestMatch.len; 
+                            // Aquí hay un riesgo si el separador falta, pero asumimos estándar.
+                        }
+
+                        value = remaining.substr(0, extractLen);
+                        cursor += extractLen;
+                        
+                        // Saltamos el separador si estaba ahí
+                        if (separatorIndex !== -1 && separatorIndex === extractLen) {
+                            cursor++;
+                        }
+
+                    } else {
+                        // Campo FIJO
+                        value = data.substr(cursor, bestMatch.len);
+                        cursor += bestMatch.len;
+                    }
+
+                    // Formateo de valores
+                    let displayValue = value;
+                    
+                    if (bestMatch.date) {
+                        displayValue = this.formatDate(value);
+                    } else if (bestMatch.weight) {
+                        displayValue = this.formatWeight(value, bestMatch.decimals, bestMatch.unit);
+                    }
+
+                    results.push({
+                        ai: aiCode,
+                        label: bestMatch.label,
+                        raw: value,
+                        value: displayValue,
+                        highlight: bestMatch.highlight || false
+                    });
+                }
+
+                return results;
+            }
+
+            formatDate(yymmdd) {
+                if (yymmdd.length !== 6) return yymmdd;
+                const yy = parseInt(yymmdd.substr(0, 2));
+                const mm = parseInt(yymmdd.substr(2, 2)) - 1; // JS meses 0-11
+                const dd = parseInt(yymmdd.substr(4, 2));
+                
+                // Asumir siglo: si yy > 50 es 19xx, sino 20xx (estándar variable, asumimos 2000-2099 para app moderna)
+                // GS1 dice ventana deslizante, pero simplificamos a 2000+
+                const fullYear = 2000 + yy;
+                
+                try {
+                    const date = new Date(fullYear, mm, dd);
+                    return date.toLocaleDateString('es-MX', { year: 'numeric', month: 'long', day: 'numeric' });
+                } catch (e) {
+                    return yymmdd + " (Fecha inválida)";
+                }
+            }
+
+            formatWeight(raw, decimals, unit) {
+                if (!raw) return "";
+                const num = parseFloat(raw);
+                if (isNaN(num)) return raw;
+                const val = num / Math.pow(10, decimals);
+                return `${val.toFixed(decimals)} ${unit}`;
+            }
+        }
+
+        // --- 3. LÓGICA DE APLICACIÓN ---
+
+        let html5QrcodeScanner = null;
+        let isScanning = false;
+        let lastScanCode = "";
+        let lastScanTime = 0;
+
+        // Audio
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function playBeep() {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const oscillator = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            oscillator.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            oscillator.type = 'square';
+            oscillator.frequency.value = 1200;
+            gainNode.gain.value = 0.1;
+            oscillator.start();
+            setTimeout(() => { oscillator.stop(); }, 150);
+            if (navigator.vibrate) navigator.vibrate(50);
+        }
+
+        async function startScanning() {
+            try {
+                document.getElementById('start-btn').classList.add('hidden');
+                document.getElementById('stop-btn').classList.remove('hidden');
+                document.getElementById('status-badge').classList.remove('opacity-0');
+
+                if (!html5QrcodeScanner) {
+                    html5QrcodeScanner = new Html5Qrcode("reader");
+                }
+
+                const config = { 
+                    fps: 15, 
+                    qrbox: { width: 260, height: 260 }, // Un poco más pequeño ayuda a enfocar
+                    aspectRatio: 1.0,
+                    // Experimental: Ayuda con códigos densos como Datamatrix
+                    experimentalFeatures: {
+                        useBarCodeDetectorIfSupported: true
+                    }
+                };
+
+                await html5QrcodeScanner.start(
+                    { facingMode: "environment" }, 
+                    config, 
+                    onScanSuccess, 
+                    (err) => {} // Ignorar errores de frame vacío
+                );
+                isScanning = true;
+            } catch (err) {
+                console.error(err);
+                alert("Error: Acceso a cámara denegado o no seguro (HTTPS requerido).");
+                stopScanning();
+            }
+        }
+
+        async function stopScanning() {
+            if (html5QrcodeScanner && isScanning) {
+                await html5QrcodeScanner.stop();
+                document.getElementById('reader').innerHTML = ""; 
+            }
+            isScanning = false;
+            document.getElementById('start-btn').classList.remove('hidden');
+            document.getElementById('stop-btn').classList.add('hidden');
+            document.getElementById('status-badge').classList.add('opacity-0');
+        }
+
+        function onScanSuccess(decodedText, decodedResult) {
+            // Evitar rebote
+            const now = Date.now();
+            if (decodedText === lastScanCode && (now - lastScanTime < 2000)) return;
+            
+            lastScanCode = decodedText;
+            lastScanTime = now;
+            playBeep();
+
+            // UI
+            document.getElementById('result-area').classList.remove('hidden');
+            document.getElementById('raw-text').innerText = decodedText.replace(/\u001D/g, '[GS]'); // Mostrar GS visualmente
+            
+            processGS1(decodedText);
+            
+            // Efecto visual flash
+            const table = document.querySelector('table');
+            table.classList.remove('flash-effect');
+            void table.offsetWidth; // trigger reflow
+            table.classList.add('flash-effect');
+        }
+
+        function processGS1(text) {
+            const parser = new GS1Parser(text);
+            const results = parser.parse();
+            const tbody = document.getElementById('gs1-table-body');
+            const noMsg = document.getElementById('no-gs1-msg');
+            
+            tbody.innerHTML = "";
+
+            if (results.length === 0) {
+                noMsg.classList.remove('hidden');
+                return;
+            }
+
+            noMsg.classList.add('hidden');
+
+            results.forEach(item => {
+                const tr = document.createElement('tr');
+                tr.className = item.highlight ? 'gs1-row-highlight' : 'gs1-row-normal';
+                
+                tr.innerHTML = `
+                    <td class="px-4 py-3 font-mono font-bold text-indigo-700 align-top">${item.ai}</td>
+                    <td class="px-4 py-3 align-top">
+                        <div class="font-bold text-gray-700 text-xs uppercase">${item.label}</div>
+                        ${item.highlight ? '<span class="text-[10px] bg-green-500 text-white px-1 rounded ml-0">IMPORTANTE</span>' : ''}
+                    </td>
+                    <td class="px-4 py-3 font-mono text-right font-medium text-gray-900 break-all align-top text-lg">
+                        ${item.value}
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function copyRaw() {
+            const text = document.getElementById('raw-text').innerText;
+            navigator.clipboard.writeText(text);
+            alert("Texto crudo copiado");
+        }
+    </script>
+</body>
+</html>
