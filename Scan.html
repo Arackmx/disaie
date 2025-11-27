@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lector QR y Código de Barras</title>
+  <style>
+    body { font-family: Arial; text-align: center; padding: 20px; background: #f0f0f0; }
+    video { width: 100%; max-width: 500px; border-radius: 12px; }
+    #resultado { margin-top: 20px; font-size: 1.4em; font-weight: bold; color: #2c3e50; }
+  </style>
+</head>
+<body>
+  <h1>Escaner QR & Código de Barras</h1>
+  <p>Apunta la cámara al código</p>
+
+  <zxing-scanner 
+    [formats]="['QR_CODE', 'EAN_13', 'EAN_8', 'UPC_A', 'UPC_E', 'CODE_128', 'CODE_39']"
+    (scanSuccess)="onCodeResult($event)">
+  </zxing-scanner>
+
+  <div id="resultado"></div>
+
+  <!-- Solo 2 scripts -->
+  <script src="https://unpkg.com/@zxing/library@latest/umd/index.min.js"></script>
+  <script src="https://unpkg.com/@zxing/ngx-scanner@latest/umd/zxing-ngx-scanner.min.js"></script>
+
+  <script>
+    // Esto se ejecuta cuando detecta un código
+    function onCodeResult(resultado) {
+      document.getElementById("resultado").innerHTML = 
+        `<p style="color:green">✓ Detectado:</p><h2>${resultado}</h2>`;
+      
+      // Si quieres detectar automáticamente si es GTIN/EAN/UPC
+      if (/^\d{8}\( |^\d{12,14} \)/.test(resultado.replace(/\s/g,''))) {
+        document.getElementById("resultado").innerHTML += 
+          `<p style="color:blue">→ Es un GTIN (${resultado.length} dígitos)</p>`;
+      }
+
+      // Sonido de éxito (opcional)
+      var audio = new Audio('https://assets.mixkit.co/sfx/preview/mixkit-arcade-game-complete-level-notification-2054.mp3');
+      audio.play();
+    }
+  </script>
+</body>
+</html>
