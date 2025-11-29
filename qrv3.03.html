@@ -1,0 +1,879 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Escáner GS1 Universal - EPICA</title>
+    <meta name="description"
+        content="Aplicación profesional para escanear y decodificar códigos QR, DataMatrix y Code 128 (GS1-128) con identificadores de aplicación estándar">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+        :root {
+            --primary-color: #6366f1;
+            --primary-dark: #4f46e5;
+            --primary-light: #818cf8;
+            --success-color: #10b981;
+            --success-light: #d1fae5;
+            --danger-color: #ef4444;
+            --warning-color: #f59e0b;
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --bg-tertiary: #334155;
+            --text-primary: #f1f5f9;
+            --text-secondary: #cbd5e1;
+            --text-muted: #94a3b8;
+            --border-color: #475569;
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            color: var(--text-primary);
+            min-height: 100vh;
+            padding: 1rem;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 2rem;
+            animation: fadeInDown 0.6s ease-out;
+        }
+
+        h1 {
+            font-size: clamp(1.75rem, 4vw, 2.5rem);
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--primary-light) 0%, var(--primary-color) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 0.5rem;
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: clamp(0.875rem, 2vw, 1rem);
+            font-weight: 400;
+        }
+
+        .scanner-section {
+            background: rgba(30, 41, 59, 0.6);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--border-color);
+            border-radius: 1rem;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: var(--shadow-xl);
+            animation: fadeInUp 0.6s ease-out;
+        }
+
+        .btn-scan {
+            width: 100%;
+            padding: 1.25rem 2rem;
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: white;
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+            border: none;
+            border-radius: 0.75rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: var(--shadow-lg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+        }
+
+        .btn-scan:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 20px 30px -10px rgba(99, 102, 241, 0.5);
+        }
+
+        .btn-scan:active {
+            transform: translateY(0);
+        }
+
+        .btn-scan:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-scan svg {
+            width: 24px;
+            height: 24px;
+        }
+
+        .camera-container {
+            position: relative;
+            width: 100%;
+            max-width: 500px;
+            margin: 1.5rem auto 0;
+            border-radius: 1rem;
+            overflow: hidden;
+            display: none;
+            box-shadow: var(--shadow-xl);
+        }
+
+        .camera-container.active {
+            display: block;
+            animation: scaleIn 0.3s ease-out;
+        }
+
+        #video {
+            width: 100%;
+            height: auto;
+            display: block;
+            background: var(--bg-tertiary);
+        }
+
+        .scanner-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 250px;
+            height: 250px;
+            border: 3px solid var(--primary-light);
+            border-radius: 1rem;
+            box-shadow: 0 0 0 9999px rgba(15, 23, 42, 0.5);
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        .scanner-overlay::before,
+        .scanner-overlay::after {
+            content: '';
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border: 3px solid var(--success-color);
+        }
+
+        .scanner-overlay::before {
+            top: -3px;
+            left: -3px;
+            border-right: none;
+            border-bottom: none;
+        }
+
+        .scanner-overlay::after {
+            bottom: -3px;
+            right: -3px;
+            border-left: none;
+            border-top: none;
+        }
+
+        .results-section {
+            display: none;
+            animation: fadeInUp 0.6s ease-out;
+        }
+
+        .results-section.active {
+            display: block;
+        }
+
+        .result-card {
+            background: rgba(30, 41, 59, 0.6);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--border-color);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .result-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .result-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .result-timestamp {
+            font-size: 0.875rem;
+            color: var(--text-muted);
+        }
+
+        .raw-data {
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 0.5rem;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            font-family: 'Courier New', monospace;
+            font-size: 0.875rem;
+            color: var(--primary-light);
+            word-break: break-all;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            border-radius: 0.75rem;
+            overflow: hidden;
+            box-shadow: var(--shadow-md);
+        }
+
+        .data-table thead {
+            background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary-color) 100%);
+        }
+
+        .data-table th {
+            padding: 1rem;
+            text-align: left;
+            font-weight: 600;
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: white;
+        }
+
+        .data-table tbody tr {
+            background: var(--bg-secondary);
+            transition: all 0.2s ease;
+        }
+
+        .data-table tbody tr:nth-child(even) {
+            background: rgba(30, 41, 59, 0.5);
+        }
+
+        .data-table tbody tr:hover {
+            background: var(--bg-tertiary);
+            transform: scale(1.01);
+        }
+
+        .data-table tbody tr.highlight {
+            background: linear-gradient(90deg, rgba(16, 185, 129, 0.2) 0%, rgba(16, 185, 129, 0.05) 100%);
+            border-left: 4px solid var(--success-color);
+        }
+
+        .data-table tbody tr.highlight:hover {
+            background: linear-gradient(90deg, rgba(16, 185, 129, 0.3) 0%, rgba(16, 185, 129, 0.1) 100%);
+        }
+
+        .data-table td {
+            padding: 1rem;
+            border-top: 1px solid var(--border-color);
+            font-size: 0.9rem;
+        }
+
+        .ai-code {
+            display: inline-block;
+            background: var(--primary-color);
+            color: white;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.375rem;
+            font-weight: 600;
+            font-size: 0.875rem;
+            font-family: 'Courier New', monospace;
+        }
+
+        .ai-description {
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .ai-value {
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .badge-success {
+            background: var(--success-light);
+            color: var(--success-color);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: var(--text-muted);
+        }
+
+        .empty-state svg {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 1rem;
+            opacity: 0.5;
+        }
+
+        .alert {
+            padding: 1rem 1.25rem;
+            border-radius: 0.75rem;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        .alert-error {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid var(--danger-color);
+            color: var(--danger-color);
+        }
+
+        .alert-info {
+            background: rgba(99, 102, 241, 0.1);
+            border: 1px solid var(--primary-color);
+            color: var(--primary-light);
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes scaleIn {
+            from {
+                opacity: 0;
+                transform: scale(0.9);
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .scanner-section {
+                padding: 1.5rem;
+            }
+
+            .data-table th,
+            .data-table td {
+                padding: 0.75rem 0.5rem;
+                font-size: 0.8rem;
+            }
+
+            .scanner-overlay {
+                width: 200px;
+                height: 200px;
+            }
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1>🔍 Escáner GS1 Universal</h1>
+            <p class="subtitle">Decodificador profesional de códigos QR, DataMatrix y Code 128 (GS1-128) con
+                identificadores de aplicación GS1</p>
+        </header>
+
+        <div class="scanner-section">
+            <button id="scanBtn" class="btn-scan">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z">
+                    </path>
+                </svg>
+                <span id="btnText">Escanear Código (QR / DataMatrix / Code 128)</span>
+            </button>
+
+            <div id="cameraContainer" class="camera-container">
+                <video id="video" playsinline></video>
+                <div class="scanner-overlay"></div>
+            </div>
+
+            <canvas id="canvas" style="display: none;"></canvas>
+        </div>
+
+        <div id="resultsSection" class="results-section">
+            <!-- Los resultados se insertarán aquí dinámicamente -->
+        </div>
+
+        <div id="emptyState" class="empty-state">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
+                </path>
+            </svg>
+            <p>No hay resultados aún. Escanea un código QR, DataMatrix o Code 128 (GS1-128) para comenzar.</p>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/@zxing/library@latest"></script>
+    <script>
+        // Diccionario completo de Identificadores de Aplicación GS1
+        const GS1_AI_DICTIONARY = {
+            '00': { name: 'SSCC', description: 'Código Seriado de Contenedor de Envío', length: 18 },
+            '01': { name: 'GTIN', description: 'Número Global de Artículo Comercial (GTIN)', length: 14, highlight: true },
+            '02': { name: 'GTIN', description: 'GTIN de artículos contenidos', length: 14 },
+            '10': { name: 'LOTE', description: 'Número de lote', variable: true, highlight: true },
+            '11': { name: 'FECHA FABRICACIÓN', description: 'Fecha de fabricación', length: 6, type: 'date', highlight: true },
+            '12': { name: 'FECHA PAGO', description: 'Fecha de vencimiento de pago', length: 6, type: 'date' },
+            '13': { name: 'FECHA EMPAQUE', description: 'Fecha de empaque', length: 6, type: 'date' },
+            '15': { name: 'CONSUMO PREF', description: 'Fecha de consumo preferente', length: 6, type: 'date' },
+            '16': { name: 'FECHA VENTA', description: 'Fecha de venta', length: 6, type: 'date' },
+            '17': { name: 'CADUCIDAD', description: 'Fecha de caducidad', length: 6, type: 'date', highlight: true },
+            '20': { name: 'VARIANTE', description: 'Variante del producto', length: 2 },
+            '21': { name: 'SERIE', description: 'Número de serie', variable: true, highlight: true },
+            '22': { name: 'DATOS FARM', description: 'Datos variables del producto (farmacéuticos)', variable: true },
+            '240': { name: 'REFERENCIA', description: 'Referencia del producto', variable: true, highlight: true },
+            '241': { name: 'CATÁLOGO', description: 'Código de catálogo del cliente', variable: true },
+            '242': { name: 'MTO', description: 'Número de variación de Made-to-Order', variable: true },
+            '243': { name: 'PCN', description: 'Número de cambio de empaque', variable: true },
+            '250': { name: 'SERIE 2', description: 'Número de serie secundario', variable: true },
+            '251': { name: 'REF ORIGEN', description: 'Referencia de origen', variable: true },
+            '253': { name: 'GDTI', description: 'Identificador Global de Tipo de Documento', variable: true },
+            '254': { name: 'GLN EXT', description: 'Extensión GLN', variable: true },
+            '255': { name: 'GCN', description: 'Número de Cupón Global', length: 13 },
+            '30': { name: 'CANTIDAD', description: 'Cantidad variable', variable: true },
+            '310': { name: 'PESO KG', description: 'Peso neto en kg (0 decimales)', length: 6, type: 'weight', decimals: 0 },
+            '3100': { name: 'PESO KG', description: 'Peso neto en kg (0 decimales)', length: 6, type: 'weight', decimals: 0 },
+            '3101': { name: 'PESO KG', description: 'Peso neto en kg (1 decimal)', length: 6, type: 'weight', decimals: 1 },
+            '3102': { name: 'PESO KG', description: 'Peso neto en kg (2 decimales)', length: 6, type: 'weight', decimals: 2 },
+            '3103': { name: 'PESO KG', description: 'Peso neto en kg (3 decimales)', length: 6, type: 'weight', decimals: 3 },
+            '3104': { name: 'PESO KG', description: 'Peso neto en kg (4 decimales)', length: 6, type: 'weight', decimals: 4 },
+            '3105': { name: 'PESO KG', description: 'Peso neto en kg (5 decimales)', length: 6, type: 'weight', decimals: 5 }
+        };
+
+        // Variables globales
+        let codeReader = null;
+        let scanning = false;
+        let selectedDeviceId = null;
+
+        // Elementos del DOM
+        const scanBtn = document.getElementById('scanBtn');
+        const btnText = document.getElementById('btnText');
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const cameraContainer = document.getElementById('cameraContainer');
+        const resultsSection = document.getElementById('resultsSection');
+        const emptyState = document.getElementById('emptyState');
+
+        // Inicializar ZXing
+        // BrowserMultiFormatReader soporta múltiples formatos automáticamente:
+        // - QR Code
+        // - DataMatrix
+        // - Code 128 (GS1-128)
+        // - EAN-13, EAN-8, UPC-A, UPC-E
+        // - Code 39, Code 93
+        // - ITF, Codabar, RSS-14, RSS-Expanded
+        async function initializeScanner() {
+            try {
+                codeReader = new ZXing.BrowserMultiFormatReader();
+                console.log('ZXing inicializado correctamente - Soporta QR, DataMatrix, Code 128 y más');
+            } catch (error) {
+                console.error('Error al inicializar ZXing:', error);
+            }
+        }
+
+        // Inicializar al cargar la página
+        initializeScanner();
+
+        // Event listener para el botón de escaneo
+        scanBtn.addEventListener('click', toggleScanner);
+
+        async function toggleScanner() {
+            if (!scanning) {
+                await startScanner();
+            } else {
+                stopScanner();
+            }
+        }
+
+        async function startScanner() {
+            try {
+                if (!codeReader) {
+                    await initializeScanner();
+                }
+
+                scanning = true;
+                cameraContainer.classList.add('active');
+                btnText.textContent = 'Detener Escaneo';
+                scanBtn.style.background = 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
+
+                // Obtener dispositivos de video
+                const videoInputDevices = await codeReader.listVideoInputDevices();
+
+                // Preferir cámara trasera en móviles
+                selectedDeviceId = videoInputDevices.length > 0 ? videoInputDevices[0].deviceId : undefined;
+
+                // Buscar cámara trasera
+                const backCamera = videoInputDevices.find(device =>
+                    device.label.toLowerCase().includes('back') ||
+                    device.label.toLowerCase().includes('rear') ||
+                    device.label.toLowerCase().includes('trasera')
+                );
+
+                if (backCamera) {
+                    selectedDeviceId = backCamera.deviceId;
+                }
+
+                console.log(`Iniciando escaneo con dispositivo: ${selectedDeviceId}`);
+
+                // Iniciar decodificación continua
+                codeReader.decodeFromVideoDevice(selectedDeviceId, 'video', (result, err) => {
+                    if (result) {
+                        console.log('Código detectado:', result.getText());
+                        processQRCode(result.getText());
+                        stopScanner();
+                    }
+                    if (err && !(err instanceof ZXing.NotFoundException)) {
+                        console.error('Error durante el escaneo:', err);
+                    }
+                });
+
+            } catch (error) {
+                console.error('Error al acceder a la cámara:', error);
+                showAlert('No se pudo acceder a la cámara. Por favor, verifica los permisos.', 'error');
+                scanning = false;
+                cameraContainer.classList.remove('active');
+                btnText.textContent = 'Escanear Código (QR / DataMatrix / Code 128)';
+                scanBtn.style.background = 'linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%)';
+            }
+        }
+
+        function stopScanner() {
+            scanning = false;
+
+            if (codeReader) {
+                codeReader.reset();
+            }
+
+            cameraContainer.classList.remove('active');
+            btnText.textContent = 'Escanear Código (QR / DataMatrix / Code 128)';
+            scanBtn.style.background = 'linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%)';
+        }
+
+        function processQRCode(rawData) {
+            console.log('Código detectado:', rawData);
+
+            // Parsear los datos GS1
+            const parsedData = parseGS1Data(rawData);
+
+            // Mostrar resultados
+            displayResults(rawData, parsedData);
+        }
+
+        function parseGS1Data(data) {
+            const results = [];
+            const GS = String.fromCharCode(29); // Group Separator (ASCII 29)
+
+            console.log('Datos crudos recibidos:', data);
+            console.log('Contiene GS:', data.includes(GS));
+
+            // Reemplazar FNC1 si existe (algunos lectores lo representan como ]d2 o ]C1)
+            let cleanData = data.replace(/\]d2/g, '').replace(/\]C1/g, '').replace(/\]e0/g, '');
+
+            // Dividir por Group Separator
+            let segments = cleanData.split(GS).filter(seg => seg.length > 0);
+
+            console.log('Segmentos encontrados:', segments);
+
+            // Si no hay GS, tratar todo como un solo segmento
+            if (segments.length === 0) {
+                segments = [cleanData];
+            }
+
+            // Procesar cada segmento
+            for (let segment of segments) {
+                let position = 0;
+
+                while (position < segment.length) {
+                    let aiFound = false;
+
+                    // Intentar encontrar AI de 4 dígitos primero, luego 3, luego 2
+                    for (let aiLength of [4, 3, 2]) {
+                        if (position + aiLength > segment.length) continue;
+
+                        const potentialAI = segment.substring(position, position + aiLength);
+
+                        // Verificar que el potencial AI sea numérico
+                        if (!/^\d+$/.test(potentialAI)) continue;
+
+                        if (GS1_AI_DICTIONARY[potentialAI]) {
+                            const aiInfo = GS1_AI_DICTIONARY[potentialAI];
+                            position += aiLength;
+
+                            let value;
+                            if (aiInfo.variable) {
+                                // Para campos de longitud variable, tomar el resto del segmento
+                                value = segment.substring(position);
+                                position = segment.length; // Avanzar al final del segmento
+                            } else {
+                                // Para campos de longitud fija
+                                const valueLength = aiInfo.length;
+                                value = segment.substring(position, position + valueLength);
+                                position += valueLength;
+                            }
+
+                            // Procesar el valor según el tipo
+                            let processedValue = value;
+
+                            if (aiInfo.type === 'date') {
+                                processedValue = formatDate(value);
+                            } else if (aiInfo.type === 'weight' || aiInfo.type === 'measure') {
+                                processedValue = formatWeight(value, aiInfo.decimals);
+                            }
+
+                            console.log(`AI ${potentialAI} encontrado: ${value}`);
+
+                            results.push({
+                                ai: potentialAI,
+                                name: aiInfo.name,
+                                description: aiInfo.description,
+                                value: value,
+                                processedValue: processedValue,
+                                highlight: aiInfo.highlight || false
+                            });
+
+                            aiFound = true;
+                            break;
+                        }
+                    }
+
+                    if (!aiFound) {
+                        // Si no se encuentra un AI válido, avanzar un carácter
+                        position++;
+                    }
+                }
+            }
+
+            console.log('Resultados parseados:', results);
+            return results;
+        }
+
+        function formatDate(dateStr) {
+            if (dateStr.length !== 6) return dateStr;
+
+            const year = parseInt('20' + dateStr.substring(0, 2));
+            const month = parseInt(dateStr.substring(2, 4));
+            const day = parseInt(dateStr.substring(4, 6));
+
+            const months = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+                'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+
+            if (month < 1 || month > 12 || day < 1 || day > 31) {
+                return dateStr;
+            }
+
+            return `${day} de ${months[month - 1]} de ${year}`;
+        }
+
+        function formatWeight(weightStr, decimals) {
+            if (!weightStr || decimals === undefined) return weightStr;
+
+            const numValue = parseInt(weightStr);
+            if (isNaN(numValue)) return weightStr;
+
+            const divisor = Math.pow(10, decimals);
+            const formattedValue = (numValue / divisor).toFixed(decimals);
+
+            return `${formattedValue} kg`;
+        }
+
+        function displayResults(rawData, parsedData) {
+            emptyState.style.display = 'none';
+            resultsSection.classList.add('active');
+
+            const timestamp = new Date().toLocaleString('es-ES', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+
+            let tableRows = '';
+
+            if (parsedData.length === 0) {
+                tableRows = `
+                    <tr>
+                        <td colspan="3" style="text-align: center; color: var(--text-muted);">
+                            No se detectaron identificadores GS1 válidos
+                        </td>
+                    </tr>
+                `;
+            } else {
+                parsedData.forEach(item => {
+                    const rowClass = item.highlight ? 'highlight' : '';
+                    const badge = item.highlight ? '<span class="badge badge-success">Importante</span>' : '';
+
+                    tableRows += `
+                        <tr class="${rowClass}">
+                            <td>
+                                <span class="ai-code">${item.ai}</span>
+                                ${badge}
+                            </td>
+                            <td>
+                                <div class="ai-description">${item.description}</div>
+                                <small style="color: var(--text-muted);">${item.name}</small>
+                            </td>
+                            <td class="ai-value">${item.processedValue}</td>
+                        </tr>
+                    `;
+                });
+            }
+
+            const resultHTML = `
+                <div class="result-card">
+                    <div class="result-header">
+                        <h2 class="result-title">✅ Código Escaneado</h2>
+                        <span class="result-timestamp">${timestamp}</span>
+                    </div>
+                    
+                    <div class="raw-data">
+                        <strong>Datos sin procesar:</strong><br>
+                        ${escapeHtml(rawData)}
+                    </div>
+                    
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>AI</th>
+                                <th>Descripción</th>
+                                <th>Valor</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${tableRows}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+
+            resultsSection.innerHTML = resultHTML + resultsSection.innerHTML;
+        }
+
+        function showAlert(message, type = 'info') {
+            const alertClass = type === 'error' ? 'alert-error' : 'alert-info';
+            const icon = type === 'error' ? '⚠️' : 'ℹ️';
+
+            const alert = document.createElement('div');
+            alert.className = `alert ${alertClass}`;
+            alert.innerHTML = `
+                <span style="font-size: 1.5rem;">${icon}</span>
+                <span>${message}</span>
+            `;
+
+            document.querySelector('.scanner-section').insertBefore(alert, cameraContainer);
+
+            setTimeout(() => {
+                alert.remove();
+            }, 5000);
+        }
+
+        function escapeHtml(text) {
+            const map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            };
+            return text.replace(/[&<>"']/g, m => map[m]);
+        }
+
+        // Limpiar al cerrar la página
+        window.addEventListener('beforeunload', () => {
+            if (codeReader) {
+                codeReader.reset();
+            }
+        });
+    </script>
+</body>
+
+</html>
